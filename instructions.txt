@@ -1,0 +1,29 @@
+How to use:
+
+The extractor can take a list of fields, find them in pdfs, and then provide the values on a csv file.
+
+Place all your pdfs in the "pdfs" folder beside the exe.
+When the program finishes, the csv file can be found beside the exe, and is called "output.csv".
+
+To run, open "extractor.exe"
+The user interface that opens can be used to create a list of fields that the program will look for.
+
+To add a new field, press "enter" or press the "+" button on the toolbar.
+Fields can be selected, changed, and deleted. You can also drag and drop to change the order.
+
+The "clear" button will remove all the fields.
+
+The "save" button will save all your current fields into a text file.
+The "load" button will prompt you to select a text file, and then it'll add all the fields in that file.
+Use these two buttons to save lists of field for future use.
+
+--------------------------IMPORTANT-------------------------
+EVERY field in the pdf must be entered, IN ORDER.
+This is to help the program read duplicate fields, and to grab the correct values.
+------------------------------------------------------------
+
+Once you are done with the fields, press the "done" button.
+This will start the extraction.
+
+Keep an eye on the console. It will tell you information if something goes wrong.
+Once a "Done!" appears and everything looks good, your csv file will automatically open.
