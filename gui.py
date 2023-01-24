@@ -1,30 +1,27 @@
-'''
-Anray Liu (high school co op student)
-Nov 2 2022
-User interface for pdf extractor
-'''
+# this code is only a user interface for the extractor
+# if the extraction is not working, change pdf_extractor.py instead
+
 
 import pygame
-import tkinter
-import sys
-import math
-from types import SimpleNamespace as Ns
+import tkinter   # used for clipboard and file dialog features
+import sys, os, math
 from threading import Thread
 from tkinter import filedialog
-import pdf_extractor
-import os
+from pdf_extractor import create_csv
+
 
 pygame.init()
 
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
+# change gui colour scheme here (use RGB values)
+
 MEDIUM_COLOUR = (255, 179, 71)
 DARK_COLOUR = (253, 88, 0)
 LIGHT_COLOUR = (255, 213, 128)
-FONT_COLOUR = WHITE
-SLIDER_COLOUR = WHITE
-arial = pygame.font.SysFont("arial", 25)
+MISC_COLOUR = (255, 255, 255) # colour for fonts, sliders, etc
 
+font = pygame.font.SysFont("arial", 25)
+
+# handles user events (mouse click, keyboard input, etc)
 
 class EventHandler:
     def __init__(self):
@@ -35,10 +32,9 @@ class EventHandler:
         self.click = False
         self.key = None
         self.key_name = None
-        self.drop_file = None
         self.resize = None
         self.scroll = 0
-        self.mouse_up = False
+        self.drop_file = None
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -50,30 +46,30 @@ class EventHandler:
                 self.key_name = pygame.key.name(event.key)
             elif event.type == pygame.VIDEORESIZE:
                 self.resize = (event.w, event.h)
-            elif event.type == pygame.DROPFILE:
-                self.drop_file = event.file
             elif event.type == pygame.MOUSEWHEEL:
                 self.scroll = event.y
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                self.mouse_up = True
+            elif event.type == pygame.DROPFILE:
+                self.drop_file = event.file
 
         self.mouse = pygame.mouse.get_pos()
         self.mouse_down = pygame.mouse.get_pressed()[0]
         self.key_down = pygame.key.get_pressed()
 
-def save(path, fields):
+# saves fields into a text file
+
+def save_fields(path, fields):
     with open(path, "w") as file:
         for f in fields:
             if f == "":
                 continue
             file.write(f + "\n")
 
-def load(path):
-    fields = []
+# loads fields from a text file
+
+def load_fields(path):
     with open(path, "r") as file:
-        for line in file.readlines():
-            fields.append(line.strip("\n"))
-    return fields
+        return [line.strip("\n") for line in file.readlines()]
+
 
 class Button:
     def __init__(self, rect, text):
@@ -84,6 +80,8 @@ class Button:
         self.hover = False
         self.click = False
 
+        self.border = 0
+
     def update(self, events):
         self.hover = self.click = False
         
@@ -92,36 +90,18 @@ class Button:
             if events.click:
                 self.click = True
 
+        self.border += (8 * self.hover - self.border) / 5
+
     def draw(self, win):
-        draw_round_rect(win, MEDIUM_COLOUR, self.rect, 30)
-        if self.hover:
-            pygame.draw.rect(win, DARK_COLOUR, self.rect, 5)
-        text_surf = arial.render(self.text, True, FONT_COLOUR)
+        # 15 represents corner roundness at each of the 4 corners
+
+        pygame.draw.rect(win, MEDIUM_COLOUR, self.rect, 0, 15, 15, 15, 15)
+        if int(self.border) != 0:
+            pygame.draw.rect(win, DARK_COLOUR, self.rect, int(self.border), 15, 15, 15, 15)
+
+        text_surf = font.render(self.text, True, MISC_COLOUR)
         win.blit(text_surf, text_surf.get_rect(center=self.rect.center).topleft)
-        
-class BackButton:
-    def __init__(self, pos, size):
-        self.big_points = [(pos[0] + math.cos(math.radians(315 - i * 135)) * size, pos[1] + math.sin(math.radians(315 - i * 135)) * size) for i in range(3)]
-        self.small_points = [(pos[0] + math.cos(math.radians(315 - i * 135)) * size * 0.7, pos[1] + math.sin(math.radians(315 - i * 135)) * size * 0.7) for i in range(3)]
-        self.points = self.big_points
-        self.size = size
-        self.pos = pos
 
-        self.click = False
-         
-    def update(self, events):
-        self.click = False
-        
-        self.points = self.big_points
-        if math.dist(events.mouse, self.pos) < self.size:
-            if events.mouse_down:
-                self.points = self.small_points
-            elif events.mouse_up:
-                self.click = True
-
-    def draw(self, win):
-        for i in range(3):
-            pygame.draw.line(win, WHITE, self.points[i], self.points[0] if i == 2 else self.points[i + 1], 3)
 
 class Slider:
     def __init__(self, win):
@@ -130,6 +110,8 @@ class Slider:
         self.value = 0
 
         self.configure_points(False)
+
+    # rescales the slider when screen is resized
 
     def configure_points(self, configured_before=True):
         win_size = self.win.get_size()
@@ -145,11 +127,13 @@ class Slider:
 
         self.circle_pos = (self.x, self.start + percent * (self.end - self.start))
 
+        self.line = self.make_surf()
+
+    def make_surf(self):
         surf = pygame.Surface((1, 10))
-        surf.fill(SLIDER_COLOUR)
-        pygame.draw.rect(surf, MEDIUM_COLOUR, (0, 0, 1, 1))
-        pygame.draw.rect(surf, MEDIUM_COLOUR, (0, 9, 1, 1))
-        self.line = pygame.transform.smoothscale(surf, (3, self.end - self.start))
+        surf.fill(MEDIUM_COLOUR)
+        pygame.draw.line(surf, MISC_COLOUR, (0, 1), (0, 8))
+        return pygame.transform.smoothscale(surf, (3, self.end - self.start))
 
     def update(self, events):
         if self.dragging:
@@ -161,6 +145,7 @@ class Slider:
 
         elif math.dist(self.circle_pos, events.mouse) <= 15 and events.click:
             self.dragging = True
+            events.click = False
             
         elif events.scroll != 0:
             self.circle_pos = (self.x, min(max(self.circle_pos[1] + events.scroll * -10, self.start), self.end))
@@ -169,131 +154,68 @@ class Slider:
     def draw(self):
         self.win.blit(self.line, (self.x, self.start))
         
-        pygame.draw.circle(self.win, SLIDER_COLOUR, self.circle_pos, 15)
-        pygame.draw.circle(self.win, MEDIUM_COLOUR, self.circle_pos, 12)            
-        
-def draw_round_rect(surface, colour, rect, r):
-    x, y, w, h = rect
+        pygame.draw.circle(self.win, MISC_COLOUR, self.circle_pos, 15)
+        pygame.draw.circle(self.win, MEDIUM_COLOUR, self.circle_pos, 12)
 
-    pygame.draw.ellipse(surface, colour,(x,y,r,r))
-    pygame.draw.ellipse(surface, colour,(x+w-r,y,r,r))
-    pygame.draw.ellipse(surface, colour,(x,y+h-r,r,r))
-    pygame.draw.ellipse(surface, colour,(x+w-r,y+h-r,r,r))
 
-    pygame.draw.rect(surface, colour,(x+r/2,y,w-r,r))
-    pygame.draw.rect(surface, colour,(x+r/2,y+h-r/2-r/2,w-r,r))
-    pygame.draw.rect(surface, colour,(x,y+r/2,r,h-r))
-    pygame.draw.rect(surface, colour,(x+w-r,y+r/2,r,h-r))
-
-    pygame.draw.rect(surface, colour,(x+r,y+r,w-r*2,h-r*2))
-
-class PathsLocation:
-    def __init__(self, main):
-        self.win = main.win
-        self.events = main.events
-        self.main = main
-
-        self.back_button = BackButton((50, 50), 25)
-
-        self.in_txt_surf = arial.render("In:  ", True, BLACK)
-        self.out_txt_surf = arial.render("Out: ", True, BLACK)
-
-        self.in_surf = arial.render("Select Path", True, FONT_COLOUR)
-        self.out_surf = self.in_surf.copy()
-
-        self.in_rect = pygame.Rect(120 + self.in_txt_surf.get_width(), 100 - self.in_txt_surf.get_height() / 2, self.in_surf.get_width() + 50, 60)
-        self.out_rect = self.in_rect.move(0, 80)
-
-        self.ok_button = Button((self.win.get_width() - 100, self.win.get_height() - 100, 80, 80), "OK")
-
-        self.in_path = ""
-        self.out_path = ""
-        self.have_both_paths = False
-        
-    def update(self):
-        self.back_button.update(self.events)
-        if self.back_button.click:
-            self.main.location = "fields"
-
-        if self.events.click:
-            if self.in_rect.collidepoint(self.events.mouse):
-                self.in_path = filedialog.askdirectory()
-                self.in_surf = arial.render(self.in_path, True, FONT_COLOUR)
-                self.main.locations["done"].input_path = self.in_path
-                self.in_rect.w = self.in_surf.get_width() + 50
-                self.have_both_paths = os.path.exists(self.in_path) and os.path.exists(os.path.dirname(self.out_path))
-
-            elif self.out_rect.collidepoint(self.events.mouse):
-                self.out_path = filedialog.asksaveasfilename()
-                if self.out_path != "" and not self.out_path.endswith(".csv"):
-                    self.out_path += ".csv"
-                self.out_surf = arial.render(self.out_path, True, FONT_COLOUR)
-                self.main.locations["done"].output_path = self.out_path
-                self.out_rect.w = self.out_surf.get_width() + 50
-                self.have_both_paths = os.path.exists(self.in_path) and os.path.exists(os.path.dirname(self.out_path))
-
-        if self.have_both_paths:
-            self.ok_button.update(self.events)
-            if self.ok_button.click:
-                self.main.locations["done"].output_path = self.out_path
-                self.main.locations["done"].input_path = self.in_path
-                self.main.location = "done"
-
-    def draw(self):
-        self.win.fill(MEDIUM_COLOUR)
-
-        self.back_button.draw(self.win)
-
-        self.win.blit(self.in_txt_surf, (100, 100))
-        draw_round_rect(self.win, DARK_COLOUR, self.in_rect, 30)
-        self.win.blit(self.in_surf, self.in_surf.get_rect(center=self.in_rect.center).topleft)
-
-        self.win.blit(self.out_txt_surf, (100, 180))
-        draw_round_rect(self.win, DARK_COLOUR, self.out_rect, 30)
-        self.win.blit(self.out_surf, self.out_surf.get_rect(center=self.out_rect.center).topleft)
-
-        if self.have_both_paths:
-            self.ok_button.draw(self.win)
+# loading screen shown during extraction
 
 class DoneLocation:
     def __init__(self, main):
         self.win = main.win
         self.events = main.events
 
-        self.ran = False
-        self.ns = Ns(percent=0, request_stop=False, stopped=False)
+        # communicator with actual pdf extractor
 
-        self.input_path = None
-        self.output_path = None
+        self.running = False
+        self.comm = {"percent":0, "stop":False}
 
+        '''
+        change input/output paths here
+        input - where the pdfs are located
+        output - where the spreadsheet will be made (must be a csv file)
+        '''
+        
+        self.input_path = "pdfs"
+        self.output_path = "output.csv"
+
+        self.fields = []
+
+    # do not remove method
+    
     def update(self):
-        if not self.ran:
-            self.ran = True
-            thread = Thread(target=self.threaded_extract)
-            thread.start()
+        pass
 
     def draw(self):
-        self.win.fill(MEDIUM_COLOUR)
-        
         w, h = self.win.get_size()
         center = (round(w / 2), round(h / 2))
         
-        pygame.draw.circle(self.win, LIGHT_COLOUR, center, 100)
+        self.win.fill(MEDIUM_COLOUR)
         
-        for i in range(round(360 * self.ns.percent)):
+        pygame.draw.circle(self.win, LIGHT_COLOUR, center, 100)
+        pygame.draw.circle(self.win, DARK_COLOUR, center, 60, 5)
+
+        # draws loading screen
+
+        for i in range(round(360 * self.comm["percent"])):
             angle = math.radians(i - 90)
             pygame.draw.circle(self.win, DARK_COLOUR, (w / 2 + math.cos(angle) * 80, h / 2 + math.sin(angle) * 80), 10)
-            
-        text = arial.render(str(round(self.ns.percent * 100)) + "%", True, BLACK)
+
+        text = font.render(str(round(self.comm["percent"] * 100)) + "%", True, (0, 0, 0))
         self.win.blit(text, text.get_rect(center=center).topleft)
 
+    # runs the pdf extractor in a thread
+
     def threaded_extract(self):
-        pdf_extractor.create_csv(self.input_path, self.output_path, self.fields, self.ns)
+        self.running = True
         
-        if not self.ns.stopped:
-            os.startfile(self.output_path)
+        create_csv(self.input_path, self.output_path, self.fields, self.comm)
+
+        self.running = False
         
-        self.ns.stopped = True
+        if self.comm["percent"] == 1.0:
+           os.startfile(self.output_path)
+
 
 class Toolbar:
     def __init__(self, loc):
@@ -333,6 +255,9 @@ class Toolbar:
         for button in self.buttons:
             button.draw(self.win)
 
+
+# menu where fields are edited
+
 class FieldsLocation:
     def __init__(self, main):
         self.win = main.win
@@ -359,6 +284,11 @@ class FieldsLocation:
     def update(self):
         self.need_slider = 50 + len(self.field_bubbles) * 60 > self.win.get_height()
         if self.need_slider:
+            if self.events.key_down[pygame.K_UP]:
+                self.events.scroll = 0.1
+            elif self.events.key_down[pygame.K_DOWN]:
+                self.events.scroll = -0.1
+            
             self.slider.update(self.events)
         else:
             self.slider.value = 0
@@ -371,6 +301,7 @@ class FieldsLocation:
             elif self.events.key_name == "tab":
                 self.toolbar.open = not self.toolbar.open
 
+        h = self.win.get_height()
         click_none = True
         for i, field in enumerate(self.field_bubbles):
             if field.rect.collidepoint(self.events.mouse) and self.events.click:
@@ -385,14 +316,20 @@ class FieldsLocation:
 
                 self.mouse_save = self.events.mouse
                     
-            field.update(self.slider.value * (60 * len(self.field_bubbles) + 90 - self.win.get_height()))
+            field.update(self.slider.value * (60 * len(self.field_bubbles) + 90 - h))
             if field.delete:
+                if field == self.selected_field:
+                    self.selected_field = None
+                    
                 del self.field_bubbles[i]
                 for o, field2 in enumerate(self.field_bubbles):
                     field2.y = 50 + o * 60
                     self.slider.configure_points()
+                    
         if click_none and self.events.click:
             self.selected_field = None
+
+        # handles dragging of fields
 
         if self.events.mouse_down:
             if self.mouse_save != None and self.mouse_save != self.events.mouse:
@@ -403,7 +340,7 @@ class FieldsLocation:
                     self.shadow_size = self.dragging_field.rect.size
                     self.shadow.fill((0, 0, 0, 0))
                     self.shadow = pygame.transform.scale(self.shadow, self.shadow_size)
-                    draw_round_rect(self.shadow, BLACK, (0, 0, *self.shadow_size), 30)
+                    pygame.draw.rect(self.shadow, (0, 0, 0), (0, 0, *self.shadow_size), 0, 15, 15, 15, 15)
         else:
             self.mouse_save = None
             if self.dragging_field != None:
@@ -417,6 +354,10 @@ class FieldsLocation:
                 self.selected_field = self.dragging_field
                 self.dragging_field = None
                 self.selected_field.rect.x = 150
+
+        ctrl = pygame.key.get_mods() & pygame.KMOD_CTRL
+
+        # adds a new field
         
         if self.toolbar.action == "+":
             self.field_bubbles.append(FieldBubble(self, (150, 50 + len(self.field_bubbles) * 60, 0, 50), ""))
@@ -424,39 +365,58 @@ class FieldsLocation:
             self.slider.value = 1
             self.slider.configure_points()
             self.selected_field = self.field_bubbles[-1]
+
+        # starts extraction
+        
         elif self.toolbar.action == "done":
             self.main.location = "done"
-            self.main.locations["done"].fields = [f.text for f in self.field_bubbles]
-            self.main.locations["done"].input_path = "pdfs"
-            self.main.locations["done"].output_path = "output.csv"
+            self.main.locations["done"].fields = [f.text for f in self.field_bubbles if f.text.strip("\n") != ""]
+            Thread(target=self.main.locations["done"].threaded_extract).start()
+
+        # removes all fields
+        
         elif self.toolbar.action == "clear":
             self.field_bubbles = []
             self.slider.configure_points(False)
-        elif self.toolbar.action == "save":
-            file = filedialog.asksaveasfilename()
+
+        # saves fields in a text file
+        
+        elif self.toolbar.action == "save" or (ctrl and self.events.key_name == "s"):
+            file = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=(("Text files", ".txt"), ("All files", "*.*")))
             if file != "":
-                if not file.endswith(".txt"):
-                    file += ".txt"
-                save(file, [f.text for f in self.field_bubbles])
-        elif self.toolbar.action == "load":
-            file = filedialog.askopenfilename()
-            if file != "" and file.endswith(".txt"):
-                fields = load(file)
-                self.field_bubbles = [FieldBubble(self, (0, 50 + i * 60, 0, 50), field) for i, field in enumerate(fields)]
+                save_fields(file, [f.text for f in self.field_bubbles])
+
+        # loads fields from a text file
+        
+        elif self.toolbar.action == "load" or (ctrl and self.events.key_name == "o"):
+            file = filedialog.askopenfilename(filetypes=(("Text files", "*.txt"), ("All files", "*.*")))
+            if file != "":
+                self.field_bubbles = [FieldBubble(self, (0, 50 + i * 60, 0, 50), field) for i, field in enumerate(load_fields(file))]
+                self.slider.value = 0
                 self.slider.configure_points(False)
+                
         self.toolbar.action = None
+
+        # text files containing fields can be drag and dropped into gui
+
+        if self.events.drop_file != None:
+            self.field_bubbles = [FieldBubble(self, (0, 50 + i * 60, 0, 50), field) for i, field in enumerate(load_fields(self.events.drop_file))]
+            self.slider.value = 0
+            self.slider.configure_points(False)
             
         
     def draw(self):
         self.win.fill(MEDIUM_COLOUR)
-        
+
         h = self.win.get_height()
-        for field in self.field_bubbles:
-            if field != self.dragging_field and field.rect.top < h and field.rect.bottom > 0:
-                field.draw()
+        for i, field in enumerate(self.field_bubbles):
+            if field.rect.top < h and field.rect.bottom > 0:
+                if field != self.dragging_field:
+                    field.draw()
 
         if self.need_slider:
             self.slider.draw()
+
         
         if self.dragging_field != None:
             self.win.blit(self.shadow, (self.events.mouse[0] - self.dragging_field.rect.w / 2 + 30, self.events.mouse[1]))
@@ -484,23 +444,38 @@ class FieldBubble:
         self.delete = False
 
         self.x_surf = pygame.Surface((50, 50), pygame.SRCALPHA)
-        pygame.draw.line(self.x_surf, WHITE, (0, 0), (50, 50), 8)
-        pygame.draw.line(self.x_surf, WHITE, (0, 50), (50, 0), 8)
+        pygame.draw.line(self.x_surf, MISC_COLOUR, (0, 0), (50, 50), 8)
+        pygame.draw.line(self.x_surf, MISC_COLOUR, (0, 50), (50, 0), 8)
+
+        self.boostx = 0
+
+        self.highlightw = 0
 
     def update(self, scrolly):
-        self.text_surf = arial.render(self.text, True, FONT_COLOUR)
+        # uncomment for "fun" mode
+        #self.boostx = abs(self.events.mouse[1] - self.rect.centery)
+
+        # uncomment for an extra visual detail when selecting fields
+        #self.highlightw += (self.rect.centerx * (self == self.loc.selected_field) - self.highlightw) / 10
+        
+        self.text_surf = font.render(self.text, True, MISC_COLOUR)
         self.rect.w = self.text_surf.get_width() + 30
 
-        self.x += (150 + (self.loc.selected_field == self) * 100 - self.x) / 10
+        self.x += (150 + (self.loc.selected_field == self) * 100 + self.boostx - self.x) / 10
         self.rect.x = self.x
         self.rect.y = self.y - scrolly
 
         if self == self.loc.selected_field:
             if self.events.key != None:
                 if self.events.key_name == "backspace":
-                    self.text = self.text[:-1]
+                    if self.text == "":
+                        self.delete = True
+                    else:
+                        self.text = self.text[:-1]
+                    
                 elif self.events.key_name == "return":
                     self.loc.selected_field = None
+                    
                 elif pygame.key.get_mods() & pygame.KMOD_CTRL:
                     if self.events.key_name == "v":
                         r = tkinter.Tk()
@@ -511,6 +486,7 @@ class FieldBubble:
                         r.withdraw()
                         r.update()
                         r.destroy()
+                        
                 else:
                     self.text += self.events.key
 
@@ -522,20 +498,23 @@ class FieldBubble:
                 self.backspace_timer = 0
 
         self.delete_pos = (self.rect.right + 50, self.rect.centery)
-        self.delete_r = (100 - (250 - self.rect.x)) / 100 * 25
+        self.delete_r = (self.rect.x - 150) / 5
         if self.delete_r != 0 and math.dist(self.delete_pos, self.events.mouse) < self.delete_r and self.events.click:
             self.delete = True
 
     def draw(self):
+        pygame.draw.rect(self.win, LIGHT_COLOUR, (0, self.rect.y, self.highlightw, self.rect.h))
+        
         rect = pygame.Rect(self.events.mouse, self.rect.size).move(self.rect.w / -2, self.rect.h / -2) if self.loc.dragging_field == self else self.rect
-        draw_round_rect(self.win, DARK_COLOUR, rect, 30)
+        pygame.draw.rect(self.win, DARK_COLOUR, rect, 0, 15, 15, 15, 15)
         text_rect = self.text_surf.get_rect(center=rect.center)
         self.win.blit(self.text_surf, text_rect.topleft)
 
         if self == self.loc.selected_field:
+            
             self.flash_timer += 0.04
             if int(self.flash_timer) % 2 == 0:
-                pygame.draw.rect(self.win, WHITE, (self.rect.right - 15, text_rect.y, 2, text_rect.h))
+                pygame.draw.rect(self.win, MISC_COLOUR, (self.rect.right - 15, text_rect.y, 2, text_rect.h))
 
         pygame.draw.circle(self.win, DARK_COLOUR, self.delete_pos, self.delete_r)
         if self.delete_r > 3:
@@ -549,8 +528,7 @@ class Main:
         self.clock = pygame.time.Clock()
         pygame.display.set_caption("PDF extractor")
 
-        self.locations = {"paths":PathsLocation(self),
-                          "done":DoneLocation(self),
+        self.locations = {"done":DoneLocation(self),
                           "fields":FieldsLocation(self)}
         self.location = "fields"
 
@@ -560,33 +538,28 @@ class Main:
         while True:
             self.events.update()
             if self.events.quit:
-                if not self.quit_queued:
-                    self.quit_queued = True
+                self.quit_queued = True
             if self.events.resize != None:
                 self.events.resize = (max(self.events.resize[0], 200), max(self.events.resize[1], 200))
                 pygame.display.set_mode(self.events.resize, pygame.RESIZABLE)
                 self.locations["fields"].slider.configure_points()
-                self.locations["paths"].ok_button.rect.topleft = (self.win.get_width() - 100, self.win.get_height() - 100)
 
             if self.quit_queued:
-                if self.locations["done"].ran:
-                    if self.locations["done"].ns.stopped:
-                        pygame.quit()
-                        sys.exit()
-                    else:
-                        self.locations["done"].ns.request_stop = True
+                if self.locations["done"].running:
+                    self.locations["done"].comm["stop"] = True
                 else:
                     pygame.quit()
                     sys.exit()
-                    
                 
-            self.clock.tick(60)
+            self.clock.tick(60) # do not change fps cap
 
             loc = self.locations[self.location]
             loc.update()
             loc.draw()
 
-            #self.win.blit(arial.render(str(round(self.clock.get_fps())), False, BLACK), (0, 0))
+            # uncomment for an fps counter
+            #self.win.blit(font.render(str(round(self.clock.get_fps())), False, (0, 0, 0)), (0, 0))
+            
             pygame.display.update()
 
 

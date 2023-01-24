@@ -1,29 +1,75 @@
-How to use:
+********************** BASICS ****************************************
 
-The extractor can take a list of fields, find them in pdfs, and then provide the values on a csv file.
+example PDF:
 
-Place all your pdfs in the "pdfs" folder beside the exe.
-When the program finishes, the csv file can be found beside the exe, and is called "output.csv".
+******************
+*                *
+*   name: Jon    *
+*                *
+******************
 
-To run, open "extractor.exe"
-The user interface that opens can be used to create a list of fields that the program will look for.
+In this PDF, the field is "name" and the value is "Jon"
 
-To add a new field, press "enter" or press the "+" button on the toolbar.
-Fields can be selected, changed, and deleted. You can also drag and drop to change the order.
+The purpose of this script is to read through PDFs, find values, and write
+them to a CSV file.
 
-The "clear" button will remove all the fields.
+example CSV:
 
-The "save" button will save all your current fields into a text file.
-The "load" button will prompt you to select a text file, and then it'll add all the fields in that file.
-Use these two buttons to save lists of field for future use.
+-------------------------
+|file	|name	  	|
+|	|	  	|
+|pdf1   |Gary	  	|
+|pdf2   |Amy	  	|
+|pdf3  	|Howard   	|
+|pdf4   |John Wick	|
+-------------------------
 
---------------------------IMPORTANT-------------------------
+******************** INSTALL *************************************
+
+Python (at least version 3) is required to run the script
+
+In addition, PyPDF2 is a Python library that must be
+installed. To use the user interface, Pygame is another
+library that must be installed.
+
+This script was created and tested on Python v3.10.8,
+PyPDF2 v2.11.1, and Pygame v2.1.2
+
+Installing Python and libraries are best explained in videos.
+
+
+******************* HOW TO USE ************************************
+
+First, beside the extractor, in a folder called "pdfs", put all the PDF files you want scanned
+
+Next, the extractor needs a list of fields to look for in each PDF. To do this, run "gui.py".
+This is the user interface that will help you enter the fields.
+	
+Press the "+" button to add a new field. Fields can be selected, edited,
+deleted, and you can drag them to change their order.
+
+The "clear" button will remove all fields
+
+After you have all the fields in place, you can press the "save" button to
+save all the fields in a text file. That way, if you need to use the same
+list of fields in the future, simply press the "load" button and find the text file.
+You can also drag and drop text files containing fields
+
+                 *** IMPORTANT ***
 EVERY field in the pdf must be entered, IN ORDER.
-This is to help the program read duplicate fields, and to grab the correct values.
-------------------------------------------------------------
+Otherwise, there may be extraction inaccuracies
 
-Once you are done with the fields, press the "done" button.
-This will start the extraction.
+Once you are ready to start the extraction, press "done".
 
-Keep an eye on the console. It will tell you information if something goes wrong.
-Once a "Done!" appears and everything looks good, your csv file will automatically open.
+During extration, every PDF will be checked for the given list of fields.
+Their associated values will be extracted and written to a CSV file.
+Meanwhile, keep an eye on the console.
+It will tell you information if something goes wrong.
+
+Once a "Done!" appears in the console and everything looks good, your CSV file will automatically open.
+
+
+********************* CONTACT ***********************************
+
+Email me at (anrayliu@gmail.com) if something goes wrong
+Redownload project here (https://github.com/ree1261/pdf-extractor)
