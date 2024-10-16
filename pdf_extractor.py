@@ -91,8 +91,8 @@ def read_pdf(path, fields):
 # if gui.py is not being used, comm is redundant
 
 def create_csv(input_path, output_path, fields, comm=None):
-    print("Input Path: {}".format(os.path.abspath(input_path)))
-    print("Output Path: {}".format(os.path.abspath(output_path)))
+    print(f"Input Path: {os.path.abspath(input_path)}")
+    print(f"Output Path: {os.path.abspath(output_path)}")
 
     try:
         with open(output_path, "w") as file:
@@ -108,7 +108,10 @@ def create_csv(input_path, output_path, fields, comm=None):
         writer.writerow(["File Name"] + fields)
 
         pdfs = [file for file in os.listdir(input_path) if file.endswith(".pdf")]
-        print("Discovered {} pdfs.".format(len(pdfs)))
+        print(f"Discovered {len(pdfs)} pdfs.")
+
+        if len(pdfs) == 0:
+            comm["percent"] = 1.0
         
         for i, file in enumerate(pdfs):
             print(f'Reading "{file}"')

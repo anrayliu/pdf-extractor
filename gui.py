@@ -10,16 +10,13 @@ from tkinter import filedialog
 from pdf_extractor import create_csv
 
 
-pygame.init()
-
 # change gui colour scheme here (use RGB values)
 
-MEDIUM_COLOUR = (255, 179, 71)
-DARK_COLOUR = (253, 88, 0)
-LIGHT_COLOUR = (255, 213, 128)
+MEDIUM_COLOUR = (169, 169, 169)
+DARK_COLOUR = (128, 128, 128)
+LIGHT_COLOUR = (211, 211, 211)
 MISC_COLOUR = (255, 255, 255) # colour for fonts, sliders, etc
 
-font = pygame.font.SysFont("arial", 25)
 
 # handles user events (mouse click, keyboard input, etc)
 
@@ -90,7 +87,7 @@ class Button:
             if events.click:
                 self.click = True
 
-        self.border += (8 * self.hover - self.border) / 5
+        self.border += (6 * self.hover - self.border) / 5
 
     def draw(self, win):
         # 15 represents corner roundness at each of the 4 corners
@@ -193,7 +190,6 @@ class DoneLocation:
         self.win.fill(MEDIUM_COLOUR)
         
         pygame.draw.circle(self.win, LIGHT_COLOUR, center, 100)
-        pygame.draw.circle(self.win, DARK_COLOUR, center, 60, 5)
 
         # draws loading screen
 
@@ -236,7 +232,7 @@ class Toolbar:
     def update(self):
         w, h = self.win.get_size()
         
-        self.size += (120 * self.open - self.size) / 10
+        self.size += (120 * self.open - self.size) / 8
         self.rect.size = (self.size, h)
         if self.events.click and self.events.mouse[0] > self.size and math.dist(self.events.mouse, (self.size, 40)) < 40:
             self.open = 1 - self.open
@@ -404,7 +400,6 @@ class FieldsLocation:
             self.slider.value = 0
             self.slider.configure_points(False)
             
-        
     def draw(self):
         self.win.fill(MEDIUM_COLOUR)
 
@@ -423,6 +418,7 @@ class FieldsLocation:
             self.dragging_field.draw()
 
         self.toolbar.draw()
+
 
 class FieldBubble:
     def __init__(self, loc, rect, text):
@@ -452,16 +448,10 @@ class FieldBubble:
         self.highlightw = 0
 
     def update(self, scrolly):
-        # uncomment for "fun" mode
-        #self.boostx = abs(self.events.mouse[1] - self.rect.centery)
-
-        # uncomment for an extra visual detail when selecting fields
-        #self.highlightw += (self.rect.centerx * (self == self.loc.selected_field) - self.highlightw) / 10
-        
         self.text_surf = font.render(self.text, True, MISC_COLOUR)
         self.rect.w = self.text_surf.get_width() + 30
 
-        self.x += (150 + (self.loc.selected_field == self) * 100 + self.boostx - self.x) / 10
+        self.x += (150 + (self.loc.selected_field == self) * 100 + self.boostx - self.x) / 6
         self.rect.x = self.x
         self.rect.y = self.y - scrolly
 
@@ -521,6 +511,7 @@ class FieldBubble:
             surf = pygame.transform.smoothscale(self.x_surf, (self.delete_r * 0.8, self.delete_r * 0.8))
             self.win.blit(surf, surf.get_rect(center=self.delete_pos).topleft)
 
+
 class Main:
     def __init__(self):
         self.win = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
@@ -558,10 +549,12 @@ class Main:
             loc.draw()
 
             # uncomment for an fps counter
-            #self.win.blit(font.render(str(round(self.clock.get_fps())), False, (0, 0, 0)), (0, 0))
+            #self.win.blit(font.render(str(round(self.clock.get_fps())), True, (0, 0, 0)), (0, 0))
             
             pygame.display.update()
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
+    pygame.init()
+    font = pygame.font.SysFont("arial", 25)
     Main().run()
